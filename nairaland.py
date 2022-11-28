@@ -6,32 +6,10 @@ upon a prompt to name the csv file, the file name must end with '_csv' this enab
 """
 # still under developmemt
 
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import shutil
 import os
-'''
-#place text to pandas and csv
-df = pd.DataFrame(list_text)
-csv = input('Enter name of csv: ')
-df.to_csv(csv) 
-
-#move file to folder
-source = "C:\\Users\\user\\Desktop\\Nairaland_Scraper"
-destination = "C:\\Users\\user\\Desktop\\Nairaland_Scraper\\Nairaland_csv"
-
-try:
-    for file in os.listdir(source):
-        if file.endswith('_csv'):
-            shutil.move(source + f'\\{file}', destination)
-            print('file moved')
-            print(f"{file}")
-
-except Exception as error:
-    print(error)
-
-'''
 
 
 class NairalandScrapper(object):
@@ -69,7 +47,6 @@ class NairalandScrapper(object):
     # needs working on
     def extract_post_time(self, post_data_list):    # post headline start from 1st tr tag
         post_data = []
-        post_headline_data = {}
         for post_id in range(0, len(post_data_list), 2):
             post_headline_data = {}
             # sometimes there are empty table rows in nairaland which don't have any data but the table row tag shows
@@ -92,27 +69,52 @@ class NairalandScrapper(object):
             post_data.append(post_headline_data)
         return post_data
 
+
+
     # functional, would have to check for variable names later
     def extract_post_text(self, post_data_list):
         post_data = []
         for post_id in range(1, len(post_data_list), 2):    # post start from 2nd tr tag
-            nairaland_user_post = {'quote': False, 'quoted_post': "", 'statistics': ""}
+            nairaland_user_post = {}
 
-            post_block = post_data_list[post_id].find('div')
-            print(post_id)
-            quote = post_block.find('blockquote')
-            if quote:
-                nairaland_user_post['quote'] = True
-                nairaland_user_post['quoted_post'] = quote.extract().text
+            post_block = self.extract_post_block(post_data_list[post_id])
+
+            blockquote = self.extract_blockquote(post_block)
+            nairaland_user_post['quote'] = self.extract_quote_status(blockquote)
+            nairaland_user_post['quoted_post'] = self.extract_quote_data(blockquote)
 
             nairaland_user_post['post_text'] = post_block.text
 
-            post_statistics_tag = post_data_list[post_id].find('p')     # likes and shares
-            if post_statistics_tag:
-                nairaland_user_post['statistics'] = post_statistics_tag.text
+            nairaland_user_post['statistics'] = self.extract_post_statistic(post_data_list[post_id])
 
             post_data.append(nairaland_user_post)   # adding dictionaries to a list brings up issues
+            if post_id > 10:
+                break
         return post_data
+
+    def extract_post_block(self, post):
+        return post.find('div')
+
+    def extract_blockquote(self, post_block_data):
+        return post_block_data.find('blockquote')
+
+    def extract_quote_status(self, blockquote_data):
+        if blockquote_data:
+            return True
+        return False
+
+    def extract_quote_data(self, blockquote_data):
+        if blockquote_data:
+            quoted_post = blockquote_data.extract().text
+            return quoted_post
+        return blockquote_data
+
+    def extract_post_statistic(self, post):
+        post_statistics = post.find('p')  # likes and shares
+        if post_statistics:
+            return post_statistics.text
+        return ""
+
 
 
 
