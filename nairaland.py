@@ -55,19 +55,27 @@ class NairalandScrapper(object):
             headline = post_data_list[post_id].find_all("a")
             if len(headline) <= 1:  # check if post is empty
                 continue
-            time = post_data_list[post_id].find('span', {'class':'s'})
-            headline_tag = headline[-3::]    # the important information start from the third to last index
-            headline_list = [headline.text for headline in headline_tag ]
+            time = self.extract_time_tag(post_data_list[post_id])
+            headline_list = self.extract_post_headline(headline)
+
             post_headline_data['board'] = headline_list[0]
             post_headline_data['post_title'] = headline_list[1]
             post_headline_data['posted_by_user'] = headline_list[2]
-            if time:
-                post_headline_data['time_of_post'] = time.text
-                post_data.append(post_headline_data)
-                continue
-            post_headline_data['time_of_post'] = "not available"
+            post_headline_data['time_of_post'] = self.extract_time_post(time)
+
             post_data.append(post_headline_data)
         return post_data
+
+    def extract_post_headline(self, headline_tag_data):
+        return [headline.text for headline in headline_tag_data[-3::]]
+
+    def extract_time_tag(self, post_data):
+        return post_data.find('span', {'class':'s'})
+
+    def extract_time_post(self, time_tag_data):
+        if time_tag_data:
+            return time_tag_data.text
+        return "not available"
 
 
 
