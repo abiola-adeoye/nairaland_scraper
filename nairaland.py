@@ -1,44 +1,54 @@
-# any method that is not protected needs to be improved.
-# sometimes there are empty table rows in nairaland which don't have any data but the table row tag shows
-# in such situations table row data doesn't exceed 1 item with find all, so we skip the rest of code if less
-# than or equal to 1 item
+"""sometimes there are empty tr tags which have no data, in such situations len(tr) doesn't exceed 1 item
+with find all, so we skip the rest of code if less than or equal to 1 item"""
 
 import requests
 from typing import Dict, List
+from itertools import cycle
 from bs4 import BeautifulSoup
 
 
-class NairalandScrapper(object):
+class NairalandSoup:
+    start_page = 0
 
-    def __init__(self, search_word):
-        self.search_word = search_word
-        self.url_structure = "https://www.nairaland.com/search/{search_term}/0/0/0/{page}"
-        self.soup = ""
-        self.page = 0
+    def __init__(self, search_word: str) -> None:
+        self.search_word: str = search_word.replace(" ", "+")
+        self.soup: str = ""
+        self.url_structure: str = f"https://www.nairaland.com/search/{self.search_word}/0/0/0/"
+        self.current_page = self.start_page
+        self.last_page = 20
 
-    def get_nairaland_data(self):
-        self.__make_soup()
-        pass
+    def get_response(self):
+        try:
+            response = requests.get(self.url_structure + str(self.current_page))
+            return response.content
+        except Exception as err:
+            print(err)
 
-    # makes request to nairaland with the inputted search term, can currently take one worded search terms
-    # i want to take multiple worded search terms
-    def get_request_content(self):
-        response = requests.get(self.url_structure.format(search_term=self.search_word, page=self.page))
-        return response.content
-
-    # makes the soup object
-    def __make_soup(self):
-        page_content = self.__get_request_content()
+    def make_soup_object(self) -> None:
+        page_content = self.get_response()
         self.soup = BeautifulSoup(page_content, 'lxml')
 
+        self.get_num_search_results()
+
+    def get_num_search_results(self) -> None:
+        pagination_links = self.soup.p
+        last_page_result_num = pagination_links.find_all('b')[-1].text
+        self.last_page = last_page_result_num
+
+
+class NairalandScrapper(NairalandSoup):
+
+    def __init__(self, search_word):
+        super().__init__(search_word)
+
     # gets number of search pages that turn up as result, soup object needs to be made to get this
-    def __get_num_search_results(self) -> str:
+    def get_num_search_results(self) -> str:
         next_page_links = self.soup.p
         num_search_page_results = next_page_links.find_all('b')[-1].text
         return num_search_page_results
 
     # this extracts the posts tags on result page (headline and actual post)
-    def get_page_posts_tags(self) -> List[str]:
+    def get_page_posts_tags(self):
         nairaland_stats_for_day = self.soup.table   # i want to extract data here to use
         post_table = nairaland_stats_for_day.find_next_sibling("table")
         post_table_tr = post_table.find_all("tr")
@@ -79,24 +89,6 @@ class NairalandScrapper(object):
 
 
 
-    # functional, would have to check for variable names later
-    def extract_post_text(self, post_data_list):
-        post_data = []
-        for post_id in range(1, len(post_data_list), 2):    # post start from 2nd tr tag
-            nairaland_user_post = {}
-
-            post_block = self.__extract_post_block(post_data_list[post_id])
-
-            blockquote = self.extract_blockquote(post_block)
-            nairaland_user_post['quote'] = self.extract_quote_status(blockquote)
-            nairaland_user_post['quoted_post'] = self.extract_quote_data(blockquote)
-
-            nairaland_user_post['post_text'] = post_block.text
-
-            nairaland_user_post['statistics'] = self.extract_post_statistic(post_data_list[post_id])
-
-            post_data.append(nairaland_user_post)   # adding dictionaries to a list brings up issues
-        return post_data
 
     def __extract_post_block(self, post_table_tr_data):
         return post_table_tr_data.find('div')
