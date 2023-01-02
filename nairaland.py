@@ -41,51 +41,45 @@ class NairalandScrapper(NairalandSoup):
     def __init__(self, search_word):
         super().__init__(search_word)
 
-    # gets number of search pages that turn up as result, soup object needs to be made to get this
-    def get_num_search_results(self) -> str:
-        next_page_links = self.soup.p
-        num_search_page_results = next_page_links.find_all('b')[-1].text
-        return num_search_page_results
-
-    # this extracts the posts tags on result page (headline and actual post)
-    def get_page_posts_tags(self):
+    # extracts tr tags on result page (headline and actual post)
+    def get_result_page_tr(self):
         nairaland_stats_for_day = self.soup.table   # i want to extract data here to use
-        post_table = nairaland_stats_for_day.find_next_sibling("table")
-        post_table_tr = post_table.find_all("tr")
-        return post_table_tr
-
-    # extracts time of post,
-    # needs working on
-    def extract_post_time(self, post_data_list: List[str]) -> Dict:    # post headline start from 1st tr tag
-        post_data = []
-        for post_id in range(0, len(post_data_list), 2):
-            post_headline_data = {}
-
-            headline = post_data_list[post_id].find_all("a")
-            if len(headline) <= 1:  # check if post is empty
-                continue
-            time = self.extract_time_tag(post_data_list[post_id])
-            headline_list = self.extract_post_headline(headline)
-
-            post_headline_data['board'] = headline_list[0]
-            post_headline_data['post_title'] = headline_list[1]
-            post_headline_data['posted_by_user'] = headline_list[2]
-            post_headline_data['time_of_post'] = self.extract_time_post(time)
-
-            post_data.append(post_headline_data)
-        return post_data
+        post_block = nairaland_stats_for_day.find_next_sibling("table")
+        post_tr_tags = post_block.find_all("tr")
+        return post_tr_tags
 
     @staticmethod
-    def extract_post_headline(headline_tag_data):
+    def get_post_headline(headline_tag_data: List[str]) -> List[str]:
         return [headline.text for headline in headline_tag_data[-3::]]
 
-    def extract_time_tag(self, post_data):
-        return post_data.find('span', {'class':'s'})
+    @staticmethod
+    def get_time_tag(post_data):
+        return post_data.find('span', {'class': 's'})
 
-    def extract_time_post(self, time_tag_data):
-        if time_tag_data:
-            return time_tag_data.text
+    @staticmethod
+    def get_time_post(time_tag):
+        if time_tag:
+            return time_tag.text
         return "not available"
+
+    # works, rename variables
+    def get_post_headline_data(self, post_tr_data: List[str]) -> Dict:    # post headline start from 1st tr tag
+        headline_data = []
+        for post_id in range(0, len(post_tr_data), 2):
+            post_headline_data = {}
+
+            headline_block = post_tr_data[post_id].find_all("a")
+            if len(headline_block) <= 1:  # if True post tr tag is empty, i.e no post
+                continue
+            time = self.get_time_tag(post_tr_data[post_id])
+            headline_info = self.get_post_headline(headline_block)
+
+            post_headline_data['board'] = headline_info[0]
+            post_headline_data['post_title'] = headline_info[1]
+            post_headline_data['posted_by_user'] = headline_info[2]
+            post_headline_data['time_of_post'] = self.get_time_post(time)
+            headline_data.append(post_headline_data)
+        return headline_data
 
 
 
