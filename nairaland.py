@@ -25,10 +25,12 @@ class NairalandSoup:
             print(err)
 
     def make_soup_object(self) -> None:
+        """Make beautifulsoup object of page we want to scrape"""
         page_content = self._get_response()
         self.soup = BeautifulSoup(page_content, 'lxml')
 
     def _get_num_search_results(self) -> None:
+        """Gets the total number of result pages for the searched word"""
         pagination_links = self.soup.p
         last_page_result_num = pagination_links.find_all('b')[-1].text
         self.last_page = int(last_page_result_num)
@@ -47,24 +49,36 @@ class NairalandScrapper(NairalandSoup):
         self.post_mod_cycle = cycle([1, 0])
         self.post_mod_num = next(self.post_mod_cycle)
 
+    # function to call
     def scrape_nairaland(self):
-        data = []
+        data = {}
+        heading = []
+        post = []
         while True:
-            print(self.current_page+1)
-            print()
-            print()
             page_tags = self._get_page_tr()
-
-            heading = self.get_headlines(page_tags)
-            post = self.get_post(page_tags)
-
-            data.append([heading, post])
+            for index in range(len(page_tags)):
+                if index % 2 == self.headline_mod_num:
+                    print(str(index) + "headline")
+                    details = self._get_headline_details(post_headline=page_tags[index])
+                    heading.append(details)
+                elif index % 2 == self.post_mod_num:
+                    print(str(index) +"post")
+                    details = self._get_post_details(post_content=page_tags[index])
+                    post.append(details)
+            data[self.current_page] = [heading, post]
             self.current_page += 1
 
             if self.current_page > self.last_page:
                 break
             self.make_soup_object()
 
+            # reset the itertool cycle so the empty tag check is reset for next page
+            self.headline_mod_cycle = cycle([0, 1])
+            self.headline_mod_num = next(self.headline_mod_cycle)
+
+            self.post_mod_cycle = cycle([1, 0])
+            self.post_mod_num = next(self.post_mod_cycle)
+        return data
 
     # extracts table row tags on result page (headline and actual post)
     def _get_page_tr(self) -> List[str]:
@@ -88,14 +102,14 @@ class NairalandScrapper(NairalandSoup):
         return "not available"
 
     @staticmethod
-    def _check_tr_tag_empty(tr_tag_value):
+    def _check_heading_tr_tag_empty(tr_tag_value):
         if len(tr_tag_value) <= 1:      # should be <= 1
             return True
 
     def _get_headline_details(self, post_headline: str) -> Optional[dict[str, Union[str, Any]]]:
         headline_details = {}
         headline_values = post_headline.find_all("a")
-        if self._check_tr_tag_empty(headline_values):  # if True post table row tag is empty, i.e. no post
+        if self._check_heading_tr_tag_empty(headline_values):  # if True post table row tag is empty, i.e. no post
             self.headline_mod_num = next(self.headline_mod_cycle)
             self.post_mod_num = next(self.post_mod_cycle)
             return None
@@ -108,17 +122,6 @@ class NairalandScrapper(NairalandSoup):
         headline_details['posted_by_user'] = headline_text[2]
         headline_details['time_of_post'] = self._get_time_post(time)
         return headline_details
-
-    # post headline start from 1st tr tag
-    def get_headlines(self, page_tr: List) -> List[Dict[str, Union[str]]]:
-        headlines = []
-
-        for headline_id in range(len(page_tr)):
-            if headline_id % 2 == self.headline_mod_num:
-                details = self._get_headline_details(post_headline=page_tr[headline_id])
-                headlines.append(details)
-
-        return headlines
 
     @staticmethod
     def _extract_post_block(post_table_tr_data):
@@ -152,7 +155,6 @@ class NairalandScrapper(NairalandSoup):
 
     def _get_post_details(self, post_content: str) -> Dict[str, str]:
         post_details = {}
-
         post_block = self._extract_post_block(post_content)
 
         blockquote = self._extract_blockquote(post_block)
@@ -162,12 +164,3 @@ class NairalandScrapper(NairalandSoup):
         post_details['statistics'] = self._extract_post_statistic(post_content)
 
         return post_details
-
-    def get_post(self, page_tr: List) -> List[Dict[str, str]]:
-        post = []
-
-        for post_id in range(len(page_tr)):
-            if post_id % 2 == self.post_mod_num:
-                details = self._get_post_details(post_content=page_tr[post_id])
-                post.append(details)
-        return post
