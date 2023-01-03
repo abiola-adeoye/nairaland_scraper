@@ -28,12 +28,10 @@ class NairalandSoup:
         page_content = self._get_response()
         self.soup = BeautifulSoup(page_content, 'lxml')
 
-        self._get_num_search_results()
-
     def _get_num_search_results(self) -> None:
         pagination_links = self.soup.p
         last_page_result_num = pagination_links.find_all('b')[-1].text
-        self.last_page = last_page_result_num
+        self.last_page = int(last_page_result_num)
 
 
 class NairalandScrapper(NairalandSoup):
@@ -42,6 +40,7 @@ class NairalandScrapper(NairalandSoup):
         super().__init__(search_word)
         super().make_soup_object()
         super()._get_num_search_results()
+        super()._get_num_search_results()
         self.headline_mod_cycle = cycle([0, 1])
         self.headline_mod_num = next(self.headline_mod_cycle)
 
@@ -49,8 +48,23 @@ class NairalandScrapper(NairalandSoup):
         self.post_mod_num = next(self.post_mod_cycle)
 
     def scrape_nairaland(self):
-        for page in range(int(self.last_page)):
-            post = self.get_post()
+        data = []
+        while True:
+            print(self.current_page+1)
+            print()
+            print()
+            page_tags = self._get_page_tr()
+
+            heading = self.get_headlines(page_tags)
+            post = self.get_post(page_tags)
+
+            data.append([heading, post])
+            self.current_page += 1
+
+            if self.current_page > self.last_page:
+                break
+            self.make_soup_object()
+
 
     # extracts table row tags on result page (headline and actual post)
     def _get_page_tr(self) -> List[str]:
@@ -75,7 +89,7 @@ class NairalandScrapper(NairalandSoup):
 
     @staticmethod
     def _check_tr_tag_empty(tr_tag_value):
-        if len(tr_tag_value) < 1:      # changed from <= 1 to <
+        if len(tr_tag_value) <= 1:      # should be <= 1
             return True
 
     def _get_headline_details(self, post_headline: str) -> Optional[dict[str, Union[str, Any]]]:
@@ -101,7 +115,6 @@ class NairalandScrapper(NairalandSoup):
 
         for headline_id in range(len(page_tr)):
             if headline_id % 2 == self.headline_mod_num:
-
                 details = self._get_headline_details(post_headline=page_tr[headline_id])
                 headlines.append(details)
 
@@ -158,4 +171,3 @@ class NairalandScrapper(NairalandSoup):
                 details = self._get_post_details(post_content=page_tr[post_id])
                 post.append(details)
         return post
-
