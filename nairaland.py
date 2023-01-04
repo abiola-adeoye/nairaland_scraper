@@ -42,7 +42,7 @@ class NairalandScrapper(NairalandSoup):
         super().__init__(search_word)
         super().make_soup_object()
         super()._get_num_search_results()
-        super()._get_num_search_results()
+
         self.headline_mod_cycle = cycle([0, 1])
         self.headline_mod_num = next(self.headline_mod_cycle)
 
@@ -50,25 +50,25 @@ class NairalandScrapper(NairalandSoup):
         self.post_mod_num = next(self.post_mod_cycle)
 
     # function to call
-    def scrape_nairaland(self):
+    def scrape_nairaland(self) -> dict[int, dict[Any, Any]]:
         data = {}
-        heading = []
-        post = []
         while True:
+            heading = []
+            post = []
+            data[self.current_page] = {}
             page_tags = self._get_page_tr()
             for index in range(len(page_tags)):
                 if index % 2 == self.headline_mod_num:
-                    print(str(index) + "headline")
                     details = self._get_headline_details(post_headline=page_tags[index])
                     heading.append(details)
                 elif index % 2 == self.post_mod_num:
-                    print(str(index) +"post")
                     details = self._get_post_details(post_content=page_tags[index])
                     post.append(details)
-            data[self.current_page] = [heading, post]
+            data[self.current_page]['heading'] = heading
+            data[self.current_page]['post'] = post
             self.current_page += 1
 
-            if self.current_page > self.last_page:
+            if self.current_page == self.last_page:
                 break
             self.make_soup_object()
 
@@ -87,6 +87,7 @@ class NairalandScrapper(NairalandSoup):
         page_tr = post_block.find_all("tr")
         return page_tr
 
+    # for get heading
     @staticmethod
     def _get_headline_text(headline_tag_data: List[str]) -> List[str]:
         return [headline.text for headline in headline_tag_data[-3::]]
@@ -106,23 +107,7 @@ class NairalandScrapper(NairalandSoup):
         if len(tr_tag_value) <= 1:      # should be <= 1
             return True
 
-    def _get_headline_details(self, post_headline: str) -> Optional[dict[str, Union[str, Any]]]:
-        headline_details = {}
-        headline_values = post_headline.find_all("a")
-        if self._check_heading_tr_tag_empty(headline_values):  # if True post table row tag is empty, i.e. no post
-            self.headline_mod_num = next(self.headline_mod_cycle)
-            self.post_mod_num = next(self.post_mod_cycle)
-            return None
-
-        time = self._get_time_tag(post_headline)
-        headline_text = self._get_headline_text(headline_values)
-
-        headline_details['board'] = headline_text[0]
-        headline_details['post_title'] = headline_text[1]
-        headline_details['posted_by_user'] = headline_text[2]
-        headline_details['time_of_post'] = self._get_time_post(time)
-        return headline_details
-
+    # for get post
     @staticmethod
     def _extract_post_block(post_table_tr_data):
         return post_table_tr_data.find('div')
@@ -152,6 +137,23 @@ class NairalandScrapper(NairalandSoup):
         if post_statistics:
             return post_statistics.text
         return ""
+
+    def _get_headline_details(self, post_headline: str) -> Optional[dict[str, Union[str, Any]]]:
+        headline_details = {}
+        headline_values = post_headline.find_all("a")
+        if self._check_heading_tr_tag_empty(headline_values):  # if True post table row tag is empty, i.e. no post
+            self.headline_mod_num = next(self.headline_mod_cycle)
+            self.post_mod_num = next(self.post_mod_cycle)
+            return {'board':"",'post_title':"",'posted_by_user':"",'time_of_post':""}
+
+        time = self._get_time_tag(post_headline)
+        headline_text = self._get_headline_text(headline_values)
+
+        headline_details['board'] = headline_text[0]
+        headline_details['post_title'] = headline_text[1]
+        headline_details['posted_by_user'] = headline_text[2]
+        headline_details['time_of_post'] = self._get_time_post(time)
+        return headline_details
 
     def _get_post_details(self, post_content: str) -> Dict[str, str]:
         post_details = {}
