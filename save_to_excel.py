@@ -9,7 +9,7 @@ def save_data_to_excel(heading_dict, post_dict, file_name):
 
     sheets = {"post_details": post_df, "heading_details": heading_df}
 
-    excel_file = '{}.xlsx'.format(file_name)
+    excel_file = '{}.xlsx'.format(file_name.replace(" ","_"))
 
     # Check if the file exist or not
     if os.path.isfile(excel_file):
