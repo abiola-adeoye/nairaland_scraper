@@ -1,11 +1,6 @@
+from helper.nairaland import NairalandScrapper
 
-
-
-
-
-
-
-
+test = NairalandScrapper("peter obi")
 
 
 

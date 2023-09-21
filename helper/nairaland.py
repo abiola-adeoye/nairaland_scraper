@@ -1,33 +1,42 @@
 """sometimes there are empty table row tags which have no data, in such situations len(tr) doesn't exceed 1 item
 with find all, so we skip the rest of code if less than or equal to 1 item"""
-import requests
-from typing import Dict, List, Union, Optional, Any
+
 from itertools import cycle
+from typing import Dict, List, Union, Optional, Any
+
+import requests
 from bs4 import BeautifulSoup
+
+from .log import load_logging
 
 
 class NairalandSoup:
     start_page = 0
+    last_page = 20
+    url_structure = "https://www.nairaland.com/search/{search_word}/0/0/0/"
 
     def __init__(self, search_word: str) -> None:
+        self.soup = None
+        self.soup: str
         self.search_word: str = search_word.replace(" ", "+")
-        self.soup: str = ""
-        self.url_structure: str = f"https://www.nairaland.com/search/{self.search_word}/0/0/0/"
         self.current_page = self.start_page
-        self.last_page = 20
+        self.logger = load_logging(__class__.__name__)
 
     def _get_response(self) -> Union[str, bytes]:
         """ Gets the response content of page we want to scrape"""
         try:
-            response = requests.get(self.url_structure + str(self.current_page))
+            response = requests.get(self.url_structure.format(search_word=self.search_word) + str("1"))
+            self.logger.info(f"Request successful for page {self.current_page} for search term: {self.search_word}")
             return response.content
-        except Exception as err:
-            print(err)
+        except Exception:
+            self.logger.error(f"Error requesting for page {self.current_page}"
+                              f" for search term: {self.search_word}", exc_info=True)
 
     def make_soup_object(self) -> None:
-        """Make beautifulsoup object of page we want to scrape"""
+        """Make the request and extract the soup object of page we want to scrape"""
         page_content = self._get_response()
         self.soup = BeautifulSoup(page_content, 'lxml')
+        self.logger.info(f"Soup object made for page {self.current_page} for search term: {self.search_word}")
 
     def _get_num_search_results(self) -> None:
         """Gets the total number of result pages for the searched word"""
@@ -40,8 +49,9 @@ class NairalandScrapper(NairalandSoup):
 
     def __init__(self, search_word):
         super().__init__(search_word)
-        super().make_soup_object()
-        super()._get_num_search_results()
+        self.make_soup_object()
+        print(self.soup.table)
+        #self._get_num_search_results()
 
         self.headline_mod_cycle = cycle([0, 1])
         self.headline_mod_num = next(self.headline_mod_cycle)
@@ -166,3 +176,4 @@ class NairalandScrapper(NairalandSoup):
         post_details['statistics'] = self._extract_post_statistic(post_content)
 
         return post_details
+
