@@ -1,4 +1,27 @@
-from datetime import datetime
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""from datetime import datetime
 from helper.nairaland import NairalandScrapper
 from helper.save_to_excel import save_data_to_excel
 
@@ -15,3 +38,4 @@ for key in aba:
     h = aba[key]['heading']
     p = aba[key]['post']
     save_data_to_excel(h, p, file_name=file_name)   # doesn't save properly when filename is too long
+"""
