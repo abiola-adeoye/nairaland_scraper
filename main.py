@@ -1,6 +1,6 @@
 from datetime import datetime
-from nairaland import NairalandScrapper
-from save_to_excel import save_data_to_excel
+from helper.nairaland import NairalandScrapper
+from helper.save_to_excel import save_data_to_excel
 
 word = input("What word do you want to search for: ")
 yes = NairalandScrapper(word)
